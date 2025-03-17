@@ -1,0 +1,7 @@
+## Todo
+
+- [x] Implement signals
+- [x] Implement effects
+- [x] Implement computed signals
+- [x] Implement basic rendering pipeline
+- [ ] Track mounted signals/computed signals/effects during rendering for cleanup.
