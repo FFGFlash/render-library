@@ -1,10 +1,12 @@
-import { Computed, effect, Signal } from "./signal";
+import ComputedSignal from "./ComputedSignal";
+import { effect } from "./helpers";
+import Signal from "./Signal";
 
 type Primitive = string | number | boolean | null | undefined;
 type Children =
   | VirtualNode
   | Signal<Children>
-  | Computed<Children>
+  | ComputedSignal<Children>
   | Primitive
   | Children[];
 
@@ -51,7 +53,7 @@ export function render(root: HTMLElement, node: VirtualNode) {
     if (node == null) {
       return document.createComment("empty");
     }
-    if (node instanceof Signal || node instanceof Computed) {
+    if (node instanceof Signal || node instanceof ComputedSignal) {
       const placeholder = document.createTextNode("");
 
       let prevChild: Node = placeholder;

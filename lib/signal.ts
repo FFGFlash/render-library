@@ -1,50 +1,10 @@
-import TaskLock from "./tasklock";
-
-/**
- * Creates a new signal with the given value
- * @param value The initial value of the signal
- */
-export function signal<T>(value: T): Signal<T>;
-/**
- * Creates a new signal
- */
-export function signal<T = undefined>(): Signal<T | undefined>;
-export function signal<T>(value?: T | (() => T)) {
-  return new Signal(value instanceof Function ? value() : value);
-}
-
-/**
- * Creates a new effect, used to run side effects when signals change.
- * @param effect The effect to run
- */
-export function effect(
-  effect: (signal: AbortSignal) => Promisable<void | (() => void)>
-) {
-  return Signal.effect(effect);
-}
-
-/**
- * Creates a new computed signal, which is derived from other signals.
- * @param effect The effect to run
- * @returns A computed signal
- */
-export function computed<T>(effect: (signal?: AbortSignal) => Promisable<T>) {
-  return new Computed(effect);
-}
-
-/**
- * Batches multiple signal updates into a single effect run.
- * @param effect The effect to run
- */
-export function batch(effect: () => void) {
-  Signal.batch(effect);
-}
+import TaskLock from "./TaskLock";
 
 /**
  * A signal that can be used to store and update values.
  * @template TValue The type of the signal's value
  */
-export class Signal<TValue = any> {
+export default class Signal<TValue = any> {
   static #dependencies = new Map<Signal, Set<() => void>>();
   static #activeEffect?: () => void;
   static #cleanupQueue = new Map<() => void, () => void>();
@@ -214,69 +174,3 @@ export class Signal<TValue = any> {
     }
   }
 }
-
-/**
- * A computed signal, which is derived from other signals.
- * @template TValue The type of the computed signal's value
- */
-export class Computed<TValue> {
-  #effect: (signal: AbortSignal) => Promisable<TValue>;
-  #signal: Signal<TValue | null>;
-
-  /**
-   * Creates a new computed signal
-   * @param effect The effect to run
-   */
-  constructor(effect: (signal?: AbortSignal) => Promisable<TValue>) {
-    const controller = new AbortController();
-    const initialValue = effect(controller.signal);
-
-    this.#effect = effect;
-
-    if (initialValue instanceof Promise) {
-      this.#signal = new Signal(null);
-      initialValue.catch(() => {});
-      controller.abort();
-
-      Signal.effect(async (signal) => {
-        this.#signal.value = await this.#effect(signal);
-      });
-      return;
-    }
-
-    this.#signal = new Signal(initialValue);
-
-    Signal.effect((signal) => {
-      this.#signal.value = this.#effect(signal) as TValue;
-    });
-  }
-
-  /**
-   * The name of the computed signal
-   */
-  get name() {
-    return this.#signal.name;
-  }
-
-  set name(name) {
-    this.#signal.name = name;
-  }
-
-  /**
-   * The current value of the computed signal
-   */
-  get value() {
-    return this.#signal.value;
-  }
-
-  /**
-   * Peek at the current value of the computed signal without subscribing to it.
-   * @returns The current value of the computed signal
-   * @see Signal.peek
-   */
-  peek() {
-    return this.#signal.peek();
-  }
-}
-
-type Promisable<T> = T | Promise<T>;

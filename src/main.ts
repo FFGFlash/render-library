@@ -1,4 +1,4 @@
-import { computed, effect, signal } from "lib/signal";
+import { computed, effect, signal } from "lib/helpers";
 import "./style.css";
 import { createNode, render } from "lib/node";
 
