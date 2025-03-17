@@ -9,13 +9,13 @@ type Children =
   | Children[];
 
 interface VirtualNode {
-  type: string | ((props: any) => VirtualNode);
+  type: string | ((props: any) => Children);
   props: Record<string, any> | null;
   children: Children;
 }
 
 export function createNode(
-  type: string | ((props: any) => VirtualNode),
+  type: string | ((props: any) => Children),
   props: Record<string, any> | null = null,
   ...children: Children[]
 ): VirtualNode {
@@ -41,10 +41,13 @@ export function render(root: HTMLElement, node: VirtualNode) {
     }
     if (node instanceof Signal || node instanceof Computed) {
       const placeholder = document.createTextNode("");
+
+      let prevChild: Node = placeholder;
       effect(() => {
         const newNode = mount(node.value, parent);
-        parent.replaceChild(newNode, placeholder);
-        placeholder.nodeValue = "";
+        parent.replaceChild(newNode, prevChild);
+        prevChild.nodeValue = "";
+        prevChild = newNode;
       });
       return placeholder;
     }
