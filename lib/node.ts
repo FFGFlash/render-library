@@ -14,6 +14,13 @@ interface VirtualNode {
   children: Children;
 }
 
+/**
+ * Creates a virtual node
+ * @param type The type of the node
+ * @param props The properties of the node
+ * @param children Child nodes
+ * @returns A virtual node
+ */
 export function createNode(
   type: string | ((props: any) => Children),
   props: Record<string, any> | null = null,
@@ -22,6 +29,11 @@ export function createNode(
   return { type, props, children: children.flat() };
 }
 
+/**
+ * Renders a virtual node to the DOM
+ * @param root The root element to render to
+ * @param node The virtual node to render
+ */
 export function render(root: HTMLElement, node: VirtualNode) {
   function mount(node: Children, parent: Node): Node {
     if (Array.isArray(node)) {

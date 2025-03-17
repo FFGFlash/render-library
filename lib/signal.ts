@@ -40,7 +40,11 @@ export function batch(effect: () => void) {
   Signal.batch(effect);
 }
 
-export class Signal<T = any> {
+/**
+ * A signal that can be used to store and update values.
+ * @template TValue The type of the signal's value
+ */
+export class Signal<TValue = any> {
   static #dependencies = new Map<Signal, Set<() => void>>();
   static #activeEffect?: () => void;
   static #cleanupQueue = new Map<() => void, () => void>();
@@ -53,10 +57,15 @@ export class Signal<T = any> {
   static #effectLock = new TaskLock();
 
   name;
-  #value: T;
+  #value: TValue;
   #dependents = new Set<() => void>();
 
-  constructor(value: T, name?: string) {
+  /**
+   * Creates a new signal with the given value
+   * @param value The initial value of the signal
+   * @param name The name of the signal (For debugging purposes)
+   */
+  constructor(value: TValue, name?: string) {
     this.name = name;
     this.#value = value;
   }
@@ -69,6 +78,9 @@ export class Signal<T = any> {
     this.#dependents.forEach((effect) => effect());
   }
 
+  /**
+   * The current value of the signal
+   */
   get value() {
     if (Signal.#activeEffect && !this.#dependents.has(Signal.#activeEffect)) {
       const effect = Signal.#activeEffect;
@@ -77,12 +89,46 @@ export class Signal<T = any> {
     return this.#value;
   }
 
-  set value(value: T) {
+  set value(value: TValue) {
     if (this.#value === value) return;
     this.#value = value;
     this.#queueNotification();
   }
 
+  /**
+   * Used to peek at the current value of the signal without subscribing to it.
+   * @returns The current value of the signal
+   * @example
+   * ```ts
+   * const a = signal(3);
+   * const b = signal(4);
+   *
+   * effect(() => {
+   *   console.log(a.peek() + b.value); // Logs 7, without peek it would log 8 then 9
+   * });
+   *
+   * a.value = 4; // Does not trigger the effect
+   * b.value = 5; // Triggers the effect
+   * ```
+   */
+  peek() {
+    return this.#value;
+  }
+
+  /**
+   * Creates a new side effect that detects signals used within it and re-runs when they change.
+   * @param effect The effect to run
+   * @example
+   * ```ts
+   * const a = signal(3);
+   *
+   * effect(() => {
+   *   console.log(a.value); // Logs 3 before the update and 4 after
+   * });
+   *
+   * a.value = 4;
+   * ```
+   */
   static effect(
     effect: (signal: AbortSignal) => Promisable<void | (() => void)>
   ) {
@@ -139,6 +185,24 @@ export class Signal<T = any> {
     cleanup?.();
   }
 
+  /**
+   * Used to batch signal updates into a single effect run.
+   * @param effect The effect to run
+   * @example
+   * ```ts
+   * const a = signal(3);
+   * const b = signal(2);
+   *
+   * effect(() => {
+   *   console.log(a.value + b.value); // Logs 5 before the update and 9 after, without batching it would log 5, 6 then 9.
+   * });
+   *
+   * batch(() => {
+   *   a.value = 4;
+   *   b.value = 5;
+   * });
+   * ```
+   */
   static batch(effect: () => void) {
     this.#batching = true;
     try {
@@ -151,11 +215,19 @@ export class Signal<T = any> {
   }
 }
 
-export class Computed<T> {
-  #effect: (signal: AbortSignal) => Promisable<T>;
-  #signal: Signal<T | null>;
+/**
+ * A computed signal, which is derived from other signals.
+ * @template TValue The type of the computed signal's value
+ */
+export class Computed<TValue> {
+  #effect: (signal: AbortSignal) => Promisable<TValue>;
+  #signal: Signal<TValue | null>;
 
-  constructor(effect: (signal?: AbortSignal) => Promisable<T>) {
+  /**
+   * Creates a new computed signal
+   * @param effect The effect to run
+   */
+  constructor(effect: (signal?: AbortSignal) => Promisable<TValue>) {
     const controller = new AbortController();
     const initialValue = effect(controller.signal);
 
@@ -175,10 +247,13 @@ export class Computed<T> {
     this.#signal = new Signal(initialValue);
 
     Signal.effect((signal) => {
-      this.#signal.value = this.#effect(signal) as T;
+      this.#signal.value = this.#effect(signal) as TValue;
     });
   }
 
+  /**
+   * The name of the computed signal
+   */
   get name() {
     return this.#signal.name;
   }
@@ -187,19 +262,21 @@ export class Computed<T> {
     this.#signal.name = name;
   }
 
+  /**
+   * The current value of the computed signal
+   */
   get value() {
     return this.#signal.value;
+  }
+
+  /**
+   * Peek at the current value of the computed signal without subscribing to it.
+   * @returns The current value of the computed signal
+   * @see Signal.peek
+   */
+  peek() {
+    return this.#signal.peek();
   }
 }
 
 type Promisable<T> = T | Promise<T>;
-
-window.Signal = Signal;
-window.Computed = Computed;
-
-declare global {
-  interface Window {
-    Signal: typeof Signal;
-    Computed: typeof Computed;
-  }
-}
