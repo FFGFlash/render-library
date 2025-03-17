@@ -1,6 +1,5 @@
-import ComputedSignal from "./ComputedSignal";
-import { effect } from "./helpers";
-import Signal from "./Signal";
+import ComputedSignal from "lib/signals/ComputedSignal";
+import Signal from "lib/signals/Signal";
 
 type Primitive = string | number | boolean | null | undefined;
 type Children =
@@ -57,7 +56,7 @@ export function render(root: HTMLElement, node: VirtualNode) {
       const placeholder = document.createTextNode("");
 
       let prevChild: Node = placeholder;
-      effect(() => {
+      Signal.effect(() => {
         const newNode = mount(node.value, parent);
         parent.replaceChild(newNode, prevChild);
         prevChild.nodeValue = "";

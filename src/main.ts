@@ -1,6 +1,6 @@
-import { computed, effect, signal } from "lib/helpers";
+import { computed, effect, signal } from "lib/signals/helpers";
 import "./style.css";
-import { createNode, render } from "lib/node";
+import { createNode, render } from "lib/rendering/node";
 
 // function Todo({ id, title }: TodoProp) {
 //   return createNode("div", { className: "relative" }, [

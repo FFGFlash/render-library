@@ -1,4 +1,4 @@
-import TaskLock from "./TaskLock";
+import TaskLock from "../utility/TaskLock";
 
 /**
  * A signal that can be used to store and update values.
