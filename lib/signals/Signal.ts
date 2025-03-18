@@ -1,4 +1,4 @@
-import TaskLock from "../utility/TaskLock";
+import TaskLock from "lib/utility/TaskLock";
 
 /**
  * A signal that can be used to store and update values.
@@ -9,6 +9,7 @@ export default class Signal<TValue = any> {
   static #activeEffect?: () => void;
   static #cleanupQueue = new Map<() => void, () => void>();
   static #abortQueue = new Map<() => void, AbortController>();
+  static activeComponentEffects?: Set<() => void>;
 
   // Batching
   static #batching = false;
@@ -133,7 +134,6 @@ export default class Signal<TValue = any> {
 
       return this.#effectLock.task(async () => {
         const controller = new AbortController();
-        const signal = controller.signal;
 
         this.#abortQueue.set(wrappedEffect, controller);
 
@@ -150,7 +150,7 @@ export default class Signal<TValue = any> {
         }
 
         try {
-          const res = effect(signal);
+          const res = effect(controller.signal);
 
           if (res instanceof Promise) cleanup = await res;
           else cleanup = res;
@@ -164,6 +164,12 @@ export default class Signal<TValue = any> {
       });
     };
     wrappedEffect();
+    this.activeComponentEffects?.add(wrappedEffect);
+  }
+
+  static stopEffect(effect: () => void) {
+    this.#abortQueue.get(effect)?.abort();
+    this.#cleanupEffect(effect);
   }
 
   static #cleanupEffect(effect: () => void) {

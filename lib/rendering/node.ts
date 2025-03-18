@@ -1,5 +1,4 @@
-import ComputedSignal from "lib/signals/ComputedSignal";
-import Signal from "lib/signals/Signal";
+import { ComputedSignal, Signal } from "lib/signals";
 
 type Primitive = string | number | boolean | null | undefined;
 type Children =
@@ -30,6 +29,8 @@ export function createNode(
   return { type, props, children: children.flat() };
 }
 
+const EffectsMap = new WeakMap<Node, Set<() => void>>();
+
 /**
  * Renders a virtual node to the DOM
  * @param root The root element to render to
@@ -47,11 +48,14 @@ export function render(root: HTMLElement, node: VirtualNode) {
       typeof node === "string" ||
       typeof node === "number" ||
       typeof node === "boolean"
-    )
+    ) {
       return document.createTextNode(node.toString());
+    }
+
     if (node == null) {
       return document.createComment("empty");
     }
+
     if (node instanceof Signal || node instanceof ComputedSignal) {
       const placeholder = document.createTextNode("");
 
@@ -61,11 +65,24 @@ export function render(root: HTMLElement, node: VirtualNode) {
         parent.replaceChild(newNode, prevChild);
         prevChild.nodeValue = "";
         prevChild = newNode;
+        return () => cleanupNode(newNode);
       });
+
       return placeholder;
     }
-    if (typeof node.type === "function")
-      return mount(node.type(node.props ?? {}), parent);
+
+    if (typeof node.type === "function") {
+      const componentEffects = new Set<() => void>();
+      const prevComponentEffects = Signal.activeComponentEffects;
+      Signal.activeComponentEffects = componentEffects;
+      try {
+        const child = mount(node.type(node.props ?? {}), parent);
+        EffectsMap.set(child, componentEffects);
+        return child;
+      } finally {
+        Signal.activeComponentEffects = prevComponentEffects;
+      }
+    }
 
     const el = document.createElement(node.type);
     applyProps(el, node.props);
@@ -90,5 +107,15 @@ export function render(root: HTMLElement, node: VirtualNode) {
     }
   };
 
+  const cleanupNode = (node: Node) => {
+    const effects = EffectsMap.get(node);
+    if (effects) {
+      effects.forEach((effect) => Signal.stopEffect(effect));
+      EffectsMap.delete(node);
+    }
+    node.childNodes.forEach(cleanupNode);
+  };
+
+  cleanupNode(root);
   root.replaceChildren(mount(node, root));
 }
