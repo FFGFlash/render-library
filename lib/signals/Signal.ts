@@ -39,13 +39,45 @@ export default class Signal<TValue = any> {
   }
 
   /**
+   * Subscribes to the signal, running the effect whenever the signal changes.
+   * @param effect The effect to subscribe to the signal
+   * @returns A function to unsubscribe the effect
+   */
+  subscribe(effect: () => void) {
+    if (this.#dependents.has(effect))
+      return this.unsubscribe.bind(this, effect);
+    this.#dependents.add(effect);
+    if (!Signal.#dependencies.has(this))
+      Signal.#dependencies.set(this, new Set());
+    Signal.#dependencies.get(this)!.add(effect);
+    return this.unsubscribe.bind(this, effect);
+  }
+
+  /**
+   * Unsubscribes the effect from the signal.
+   * @param effect The effect to unsubscribe
+   */
+  unsubscribe(effect: () => void) {
+    if (!this.#dependents.has(effect)) return;
+    this.#dependents.delete(effect);
+    Signal.#dependencies.get(this)!.delete(effect);
+    if (Signal.#dependencies.get(this)!.size === 0) {
+      Signal.#dependencies.delete(this);
+    }
+  }
+
+  /**
+   * Unsubscribes all effects from the signal.
+   */
+  unsubscribeAll() {
+    this.#dependents.forEach((effect) => this.unsubscribe(effect));
+  }
+
+  /**
    * The current value of the signal
    */
   get value() {
-    if (Signal.#activeEffect && !this.#dependents.has(Signal.#activeEffect)) {
-      const effect = Signal.#activeEffect;
-      this.#dependents.add(effect);
-    }
+    if (Signal.#activeEffect) this.subscribe(Signal.#activeEffect);
     return this.#value;
   }
 
@@ -90,7 +122,8 @@ export default class Signal<TValue = any> {
    * ```
    */
   static effect(
-    effect: (signal: AbortSignal) => Promisable<void | (() => void)>
+    effect: (signal: AbortSignal) => Promisable<void | (() => void)>,
+    signals?: Signal[]
   ) {
     const wrappedEffect = () => {
       if (this.#abortQueue.has(wrappedEffect)) {
@@ -107,6 +140,8 @@ export default class Signal<TValue = any> {
         let cleanup: void | (() => void) = undefined;
 
         this.#activeEffect = wrappedEffect;
+
+        signals?.forEach((signal) => signal.subscribe(wrappedEffect));
 
         try {
           this.#cleanupEffect(wrappedEffect);

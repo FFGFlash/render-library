@@ -17,11 +17,13 @@ export function signal<T>(value?: T | (() => T)) {
 /**
  * Creates a new effect, used to run side effects when signals change.
  * @param effect The effect to run
+ * @param signals The signals to watch for changes (This is automatically detected and doesn't override discovered signals)
  */
 export function effect(
-  effect: (signal: AbortSignal) => Promisable<void | (() => void)>
+  effect: (signal: AbortSignal) => Promisable<void | (() => void)>,
+  signals?: Signal[]
 ) {
-  return Signal.effect(effect);
+  return Signal.effect(effect, signals);
 }
 
 /**
