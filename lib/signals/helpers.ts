@@ -42,3 +42,22 @@ export function computed<T>(effect: (signal?: AbortSignal) => Promisable<T>) {
 export function batch(effect: () => void) {
   Signal.batch(effect);
 }
+
+/**
+ * Maps a signal to a new signal with the mapped value
+ * @param signal The signal to map
+ * @param fn The mapping function
+ * @param thisArg The this argument for the mapping function
+ * @returns A computed signal with the mapped array
+ */
+export function map<T, U = T>(
+  signal: Signal<T[]> | ComputedSignal<T[]>,
+  fn: (value: T, index: number, array: T[]) => U,
+  thisArg?: any
+) {
+  return computed(() => {
+    const array = signal.value;
+    if (!array) return [];
+    return array.map(fn, thisArg);
+  });
+}

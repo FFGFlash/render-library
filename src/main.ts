@@ -45,6 +45,17 @@ function Main() {
       }),
     ]
   );
+  // return (
+  //   <div className="flex flex-col gap-10 p-10 items-center text-white">
+  //     <h1 className="text-4xl font-bold">Counter</h1>
+  //     <div className="flex gap-5">
+  //       <button onClick={() => count.value--}>-</button>
+  //       <span>{count}</span>
+  //       <button onClick={() => count.value++}>+</button>
+  //     </div>
+  //     {count.value % 2 === 0 ? <Even /> : <Odd />}
+  //   </div>
+  // );
 }
 
 const rootEl = document.getElementById("app");
