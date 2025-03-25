@@ -1,18 +1,22 @@
 import { ComputedSignal, Signal } from "lib/signals";
 
 type Primitive = string | number | boolean | null | undefined;
-type Children =
+export type Children =
   | VirtualNode
   | Signal<Children>
   | ComputedSignal<Children>
   | Primitive
   | Children[];
 
-interface VirtualNode {
+export interface VirtualNode {
   type: string | ((props: any) => Children);
   props: Record<string, any> | null;
   children: Children;
 }
+
+export type FunctionComponent<T extends Record<any, any> = any> = (
+  props: T
+) => Children;
 
 /**
  * Creates a virtual node
@@ -21,9 +25,9 @@ interface VirtualNode {
  * @param children Child nodes
  * @returns A virtual node
  */
-export function createNode(
-  type: string | ((props: any) => Children),
-  props: Record<string, any> | null = null,
+export function createNode<T extends Record<any, any>>(
+  type: string | FunctionComponent<T>,
+  props: T | null = null,
   ...children: Children[]
 ): VirtualNode {
   return { type, props, children: children.flat() };

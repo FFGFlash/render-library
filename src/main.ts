@@ -1,6 +1,13 @@
 import { computed, effect, signal } from "lib/signals";
 import "./style.css";
 import { createNode, render } from "lib/rendering/node";
+import lazy from "lib/utility/lazy";
+import sleep from "./sleep";
+
+const Counter = lazy(async () => {
+  await sleep(10000);
+  return import("./Counter");
+});
 
 function Odd() {
   const test = signal(0);
@@ -43,19 +50,9 @@ function Main() {
       computed(() => {
         return count.value % 2 === 0 ? createNode(Even) : createNode(Odd);
       }),
+      createNode(Counter),
     ]
   );
-  // return (
-  //   <div className="flex flex-col gap-10 p-10 items-center text-white">
-  //     <h1 className="text-4xl font-bold">Counter</h1>
-  //     <div className="flex gap-5">
-  //       <button onClick={() => count.value--}>-</button>
-  //       <span>{count}</span>
-  //       <button onClick={() => count.value++}>+</button>
-  //     </div>
-  //     {count.value % 2 === 0 ? <Even /> : <Odd />}
-  //   </div>
-  // );
 }
 
 const rootEl = document.getElementById("app");
